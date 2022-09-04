@@ -1,0 +1,35 @@
+.button-container a {
+  display: inline-block;
+  border: none;
+  outline: none;
+  padding: 8px 60px;
+  color: var(--vt-c-white);
+  font-family: 'Roboto', sans-serif;
+  border-radius: 4px;
+  position: relative;
+  background-image: linear-gradient(90deg, var(--vt-c-indigo) 0%, var(--vt-c-indigo-lite) 100%);
+  -webkit-backface-visibility: hidden;
+  z-index: 1;
+}
+
+.button-container a:after {
+  position: absolute;
+  content: '';
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  background-image: linear-gradient(90deg, var(--vt-c-red) 0%, var(--vt-c-orange) 100%);
+  transition: opacity 0.5s ease-out;
+  z-index: 2;
+  opacity: 0;
+}
+
+.button-container a:hover:after {
+  opacity: 1;
+}
+.button-container a span {
+  position: relative;
+  z-index: 3;
+}

@@ -1,0 +1,23 @@
+@import "base.scss";
+@import "buttons.scss";
+
+.container {
+  &__main--out {
+    margin: 0 156px;
+  }
+
+  &__main--in {
+    padding: 0 156px;
+  }
+}
+
+.page-title {
+  margin: 0 0 0 40%;
+  padding: 0;
+
+  &--h1 {
+    font-size: 24px;
+    line-height: 36px;
+    color: var(--vt-c-dark);
+  }
+}
