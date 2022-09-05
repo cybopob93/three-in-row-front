@@ -19,11 +19,9 @@ import { RouterLink } from "vue-router";
       <RouterLink to="/about">About</RouterLink>
     </nav>
 
-    <div class="header__button button-container">
-      <RouterLink to="/">
-        <span>To Game</span>
-      </RouterLink>
-    </div>
+    <RouterLink class="header__button base-button" to="/">
+      <span>To Game</span>
+    </RouterLink>
   </header>
 </template>
 
@@ -35,7 +33,7 @@ import { RouterLink } from "vue-router";
   background: var(--color-background);
   padding-top: 16px;
   padding-bottom: 16px;
-  box-shadow: 0px 4px 25px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1);
   margin-bottom: 32px;
 
   &__logo {

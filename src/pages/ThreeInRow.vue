@@ -2,6 +2,7 @@
 import { computed, reactive } from "vue";
 import type { Settings } from "@/models/three-in-row/settings";
 import ThreeInRowGame from "@/components/ThreeInRowHtml/ThreeInRowGame.vue";
+import BaseButton from "@/components/Base/BaseButton.vue";
 
 const gameDifficulty: Array<Settings> = [
   {
@@ -57,24 +58,37 @@ function pickGameDifficulty(difficulty: Settings) {
 </script>
 
 <template>
-  <h1>Three in row (html version)</h1>
-  <div v-if="isGameInitState">
-    <button @click="state.gameState='play'">Start game</button>
-    <button @click="state.gameState='settings'">Settings</button>
-  </div>
-  <div v-if="isSettingsOpened">
-    <button @click="state.gameState = 'idle'">Back to menu</button>
-    <div>
+  <h1 class="page-title page-title--h1">Three in row (html version)</h1>
+  <section class="three-in-row-view">
+    <div v-if="isGameInitState" class="three-in-row-view--init">
+      <BaseButton @click="state.gameState='play'">Start game</BaseButton>
+      <a href="#" @click="state.gameState='settings'">Settings</a>
+    </div>
+    <div v-if="isSettingsOpened">
+      <button @click="state.gameState = 'idle'">Back to menu</button>
       <div>
-        <label for="setTimer">Run timer (if is on, results will be saved in lead table)</label>
-        <input type="checkbox" id="setTimer" v-model="state.useTimer">
-      </div>
-      <h2>Game difficult:</h2>
-      <div v-for="variant in gameDifficulty" :key="variant.name">
-        <label :for="variant.name">{{ variant.name }}</label>
-        <input type="radio" :id="variant.name" :checked="variant.value === state.settings.value" @input="pickGameDifficulty(variant)">
+        <div>
+          <label for="setTimer">Run timer (if is on, results will be saved in lead table)</label>
+          <input type="checkbox" id="setTimer" v-model="state.useTimer">
+        </div>
+        <h2>Game difficult:</h2>
+        <div v-for="variant in gameDifficulty" :key="variant.name">
+          <label :for="variant.name">{{ variant.name }}</label>
+          <input type="radio" :id="variant.name" :checked="variant.value === state.settings.value" @input="pickGameDifficulty(variant)">
+        </div>
       </div>
     </div>
-  </div>
-  <three-in-row-game v-if="isGameStarted"></three-in-row-game>
+    <three-in-row-game v-if="isGameStarted"></three-in-row-game>
+  </section>
 </template>
+
+<style lang="scss" scoped>
+.three-in-row-view {
+  &--init {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+}
+</style>
