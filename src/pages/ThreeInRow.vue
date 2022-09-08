@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive } from "vue";
+import { computed, reactive, nextTick } from "vue";
 import type { Settings } from "@/models/three-in-row/settings";
 import ThreeInRowGame from "@/components/ThreeInRowHtml/ThreeInRowGame.vue";
 import BaseButton from "@/components/Base/BaseButton.vue";
@@ -55,11 +55,18 @@ const isGameInitState = computed(() => {
 function pickGameDifficulty(difficulty: Settings) {
   state.settings = difficulty;
 }
+
+async function reset() {
+  state.gameState= 'idle';
+  await nextTick();
+  state.gameState= 'play';
+}
 </script>
 
 <template>
   <h1 class="page-title page-title--h1">Three in row (html version)</h1>
   <section class="three-in-row-view">
+    <BaseButton @click="reset">Reset</BaseButton>
     <div v-if="isGameInitState" class="three-in-row-view--init">
       <BaseButton @click="state.gameState='play'">Start game</BaseButton>
       <a href="#" @click="state.gameState='settings'">Settings</a>
