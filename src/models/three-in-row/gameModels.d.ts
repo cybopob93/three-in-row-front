@@ -13,6 +13,7 @@ export interface GameField {
   isErrorState: boolean;
   isPicked: boolean;
   isMoveState: boolean;
+  isReadyToClear: boolean;
   moveTo: {
     x: string;
     y: string;
