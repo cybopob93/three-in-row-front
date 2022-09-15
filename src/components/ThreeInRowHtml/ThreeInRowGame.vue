@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeMount, reactive } from "vue";
 import type { Settings } from "@/models/three-in-row/settings";
-import type { Color, GameField, GameFieldPosition } from "@/models/three-in-row/gameModels";
+import type { Color, GameField } from "@/models/three-in-row/gameModels";
 
 const state: {
   useTimer: boolean,
@@ -32,25 +32,25 @@ onBeforeMount(() => {
   for (let row = 0; row < settings.countLines; row++) {
     state.gameField[row] = new Array(settings.countRows);
     for (let column = 0; column < settings.countRows; column++) {
-      do {
-        state.gameField[row][column] = {
-          position: {
-            x: row,
-            y: column,
-          },
-          color: getRandomColor(),
-          isErrorState: false,
-          isPicked: false,
-          isMoveState: false,
-          isReadyToClear: false,
-          moveTo: {
-            x: "0px",
-            y: "0px",
-          },
-        };
-      } while (checkState(row, column))
+      state.gameField[row][column] = {
+        position: {
+          x: row,
+          y: column,
+        },
+        color: getRandomColor(),
+        isErrorState: false,
+        isPicked: false,
+        isMoveState: false,
+        isReadyToClear: false,
+        isDrop: false,
+        moveTo: {
+          x: "0px",
+          y: "0px",
+        },
+      };
     }
   }
+  reset();
 });
 
 function getRandomColor(): Color {
@@ -63,46 +63,6 @@ function getRandomColor(): Color {
   ];
   const randomIndex = Math.floor(Math.random()*colors.length)
   return colors[randomIndex] as Color;
-}
-
-function checkState(row: number, column: number): boolean {
-  return checkHorizontal(row, column) || checkVertical(row, column);
-}
-
-function checkHorizontal(row: number, column: number): boolean {
-  let countOfSameColors = 1;
-  let currentColor = state.gameField[row][column].color
-  for (let cN = column - 1; cN >= 0; cN--) {
-    if (currentColor === state.gameField[row][cN].color) {
-      countOfSameColors++;
-    } else {
-      currentColor = state.gameField[row][cN].color;
-      countOfSameColors = 1;
-    }
-    if (countOfSameColors > 2) {
-      break;
-    }
-  }
-
-  return countOfSameColors > 2;
-}
-
-function checkVertical(row: number, column: number): boolean {
-  let countOfSameColors = 1;
-  let currentColor = state.gameField[row][column].color;
-  for (let rN = row - 1; rN >= 0; rN--) {
-    if (currentColor === state.gameField[rN][column].color) {
-      countOfSameColors++;
-    } else {
-      currentColor = state.gameField[rN][column].color;
-      countOfSameColors = 1;
-    }
-    if (countOfSameColors > 2) {
-      break;
-    }
-  }
-
-  return countOfSameColors > 2;
 }
 
 async function pickBlock(element: GameField) {
@@ -137,33 +97,88 @@ async function pickBlock(element: GameField) {
   calcMovies(el1, el2);
 
   await makeMove(el1, el2);
-  const itemsToRemove1 = await checkAround(el1);
-  const itemsToRemove2 = await checkAround(el2);
+  const itemsToRemove1 = checkAround(el1);
+  const itemsToRemove2 = checkAround(el2);
 
   if (itemsToRemove1.length === 0 && itemsToRemove2.length === 0) {
     await makeError(el1, el2);
     calcMovies(el2, el1);
     await makeMove(el2, el1);
+    await delay(0.55);
+  } else {
+    state.gameField.forEach(r => r.forEach(el => {
+      el.isPicked = false;
+    }));
+    await makeDrop();
   }
-
   await reset();
 }
 
-async function reset(): Promise<void> {
+async function delay(sec = 1): Promise<void> {
   return new Promise(resolve => {
-    setTimeout(() => {
-      state.gameField.forEach(r => r.forEach(el => {
-        if (el.isReadyToClear && el.isPicked) {
-          el.color = getRandomColor();
-        }
-        el.isPicked = false;
-        el.isReadyToClear = false;
-        el.isErrorState = false;
-        el.isMoveState = false;
-      }));
-      resolve();
-    }, 1500);
+    setTimeout(resolve, sec * 1000);
   });
+}
+
+async function makeDrop(): Promise<void> {
+  const promises = [];
+  for (let y = 0; y < settings.countRows ; y++) {
+    promises.push(dropColumn(y));
+  }
+  await Promise.all(promises);
+}
+
+async function dropColumn(y: number): Promise<void> {
+  for (let x = 0; x < settings.countLines; x++) {
+    const el = state.gameField[x][y];
+    if (el.isReadyToClear) {
+      el.moveTo.y = "-52px";
+      el.moveTo.x = "0px";
+      el.color = x > 0 ? state.gameField[x-1][y].color : getRandomColor();
+      el.isDrop = true;
+      el.isReadyToClear = false;
+      for (let tmpX = x - 1; tmpX >= 0; tmpX--) {
+        state.gameField[tmpX][y].moveTo.y = "-52px";
+        state.gameField[tmpX][y].moveTo.x = "0px";
+        state.gameField[tmpX][y].color = tmpX > 0 ? state.gameField[tmpX-1][y].color : getRandomColor();
+        state.gameField[tmpX][y].isDrop = true;
+      }
+      await delay(0.2);
+      for (let tmpX = x; tmpX >= 0; tmpX--) {
+        state.gameField[tmpX][y].isDrop = false;
+        state.gameField[tmpX][y].isPicked = false;
+      }
+      await delay(0.01);
+    }
+  }
+}
+
+async function reset(): Promise<void> {
+  state.gameField.forEach(r => r.forEach(el => {
+    el.isPicked = false;
+    el.isReadyToClear = false;
+    el.isErrorState = false;
+    el.isMoveState = false;
+    el.isDrop = false;
+  }));
+  let needShuffle = true;
+  do {
+    const elsToMove = new Set<string>();
+    for (let y = 0; y < settings.countLines ; y++) {
+      for (let x = 0; x < settings.countRows ; x++) {
+        const el = state.gameField[y][x];
+        const elsToRemove = checkAround(el);
+        elsToRemove.forEach(elem => {
+          elsToMove.add(`${elem.position.x}-${elem.position.y}`);
+        })
+      }
+    }
+    if (elsToMove.size > 0) {
+      await makeDrop();
+    } else {
+      needShuffle = false;
+    }
+  } while (needShuffle);
 }
 
 function calcMovies(el1: GameField, el2: GameField): void {
@@ -212,7 +227,7 @@ async function makeError(el1: GameField, el2: GameField): Promise<unknown> {
       el1.isErrorState = false;
       el2.isErrorState = false;
       resolve(true);
-    }, 1000)
+    }, 500)
   });
 }
 
@@ -225,7 +240,7 @@ async function makeMove(el1: GameField, el2: GameField): Promise<void> {
       el1.color = el2.color;
       el2.color = tmpColor;
       resolve();
-    }, 1000);
+    }, 550);
   })
 }
 
@@ -263,7 +278,7 @@ function checkHorizontal2(el: GameField): GameField[] {
   return result.length >= 3 ? result : [];
 }
 
-async function checkAround(el: GameField): Promise<GameField[]> {
+function checkAround(el: GameField): GameField[] {
   const result: GameField[] = [...checkVertical2(el), ...checkHorizontal2(el)];
   if (result.length === 0) {
     return [];
@@ -288,17 +303,16 @@ async function checkAround(el: GameField): Promise<GameField[]> {
           '--error': element.isErrorState,
           '--move': element.isMoveState,
           '--clear': element.isReadyToClear,
-          '--destroy': element.isReadyToClear && element.isPicked,
+          '--drop': element.isDrop,
         }"
         :style="[
           `background: var(${element.color})`,
           `--move-to-x: ${element.moveTo.x}`,
-          `--move-to-y: ${element.moveTo.y}`
+          `--move-to-y: ${element.moveTo.y}`,
         ]"
         :disabled="isChoiceCompleted"
         @click="pickBlock(element)"
       >
-        {{ element.position.x }} - {{ element.position.y }}
       </div>
     </div>
   </section>
@@ -319,11 +333,16 @@ async function checkAround(el: GameField): Promise<GameField[]> {
   100% { transform: translate(var(--move-to-x), var(--move-to-y)); }
 }
 
+@keyframes resetPosition {
+  100% { transform: translate(0px, 0px); }
+}
+
 .game {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  overflow: hidden;
 
   &__field {
     transition: transform 0.3s;
@@ -351,14 +370,14 @@ async function checkAround(el: GameField): Promise<GameField[]> {
 
   .--active.--error {
     animation-name: shuffleError;
-    animation-duration: 0.2s;
+    animation-duration: 0.18s;
     animation-fill-mode: forwards;
     animation-iteration-count: 5;
   }
 
   .--active.--move {
     animation-name: swapFields;
-    animation-duration: 0.95s;
+    animation-duration: 0.5s;
     animation-fill-mode: forwards;
     animation-iteration-count: 1;
   }
@@ -370,9 +389,12 @@ async function checkAround(el: GameField): Promise<GameField[]> {
     animation-iteration-count: infinite;
   }
 
-  .--destroy {
-    transition: opacity 1.5s;
-    opacity: 0;
+  .--drop {
+    transform: translate(var(--move-to-x), var(--move-to-y));
+    animation-name: resetPosition;
+    animation-duration: 0.2s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: 1;
   }
 }
 </style>
