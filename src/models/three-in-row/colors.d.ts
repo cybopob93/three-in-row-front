@@ -3,7 +3,7 @@ const Colors = Object.freeze({
   DARK = "--vt-c-dark",
   INDIGO = "--vt-c-indigo",
   RED = "--vt-c-red-dark",
-  ORANGE = "--vt-c-orange"
+  ORANGE = "--vt-c-orange",
 });
 
 export default Colors;

@@ -7,11 +7,6 @@ export interface GameFieldPosition {
   y: number;
 }
 
-export interface GameFieldSpacePosition {
-  x: string;
-  y: string;
-}
-
 export interface GameField {
   position: GameFieldPosition;
   color: Color;
@@ -20,5 +15,5 @@ export interface GameField {
   isMoveState: boolean;
   isReadyToClear: boolean;
   isDrop: boolean;
-  moveTo: GameFieldSpacePosition;
+  moveTo: GameFieldPosition;
 }

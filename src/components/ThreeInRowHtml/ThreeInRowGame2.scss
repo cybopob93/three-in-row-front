@@ -1,0 +1,66 @@
+@keyframes shuffleError {
+  25% {
+    transform: translateX(5%);
+  }
+  50% {
+    transform: translateX(-5%);
+  }
+}
+
+@keyframes move {
+  100% {
+    left: var(--move-to-x);
+    top: var(--move-to-y);
+  }
+}
+
+.game {
+  position: relative;
+  overflow: hidden;
+
+  &__field {
+    position: absolute;
+    height: 35px;
+    width: 35px;
+    margin: 10px;
+    cursor: pointer;
+    outline: none;
+    border: none;
+    padding: 0;
+  }
+
+  .--active {
+    border-radius: 4px;
+    border: 2px solid blueviolet;
+    transform: scale(1.2);
+  }
+
+  .--error {
+    animation-name: shuffleError;
+    animation-duration: 0.18s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: 5;
+  }
+
+  .--move {
+    animation-name: move;
+    animation-duration: 0.5s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: 1;
+  }
+
+  .--clear {
+    animation-name: shuffleError;
+    animation-duration: 0.2s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: infinite;
+  }
+
+  .--drop {
+    transform: translate(var(--move-to-x), var(--move-to-y));
+    animation-name: resetPosition;
+    animation-duration: 0.5s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: 1;
+  }
+}

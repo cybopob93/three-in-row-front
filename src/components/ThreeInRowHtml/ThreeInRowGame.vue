@@ -15,7 +15,7 @@ const settings: Settings = reactive({
   value: 5,
   name: "Easy",
   countRows: 5,
-  countLines: 5,
+  countColumns: 5,
 });
 
 const isChoiceCompleted = computed(() => {
@@ -23,13 +23,12 @@ const isChoiceCompleted = computed(() => {
   for (const row of state.gameField) {
     countPicked += row.filter((el) => el.isPicked).length;
   }
-
   return countPicked >= 2;
 });
 
 onBeforeMount(() => {
-  state.gameField = new Array(settings.countLines);
-  for (let row = 0; row < settings.countLines; row++) {
+  state.gameField = new Array(settings.countColumns);
+  for (let row = 0; row < settings.countColumns; row++) {
     state.gameField[row] = new Array(settings.countRows);
     for (let column = 0; column < settings.countRows; column++) {
       state.gameField[row][column] = {
@@ -89,8 +88,6 @@ async function pickBlock(element: GameField) {
 
   const hasErrorPick = await checkErrorPick(el1, el2);
   if (hasErrorPick) {
-    el1.isPicked = false;
-    el2.isPicked = false;
     return;
   }
 
@@ -133,45 +130,27 @@ async function makeDrop(): Promise<void> {
 async function dropColumn(y: number): Promise<void> {
   const fields = [];
   const ids: Set<string> = new Set();
-  const coefMatrix = {};
-  for (let x = 0; x < settings.countLines; x++) {
-    const el = state.gameField[x][y];
-  }
-  for (let x = 0; x < settings.countLines; x++) {
+  for (let x = 0; x < settings.countColumns; x++) {
     const el = state.gameField[x][y];
     if (el.isReadyToClear) {
-      // el.moveTo.y = "-52px";
       el.moveTo.x = "0px";
       el.color = x > 0 ? state.gameField[x - 1][y].color : getRandomColor();
-      // el.isDrop = true;
-      // el.isReadyToClear = false;
       if (!ids.has(`${el.position.x}-${el.position.y}`)) {
         fields.push(el);
         ids.add(`${el.position.x}-${el.position.y}`);
       }
       for (let tmpX = x - 1; tmpX >= 0; tmpX--) {
         const el2 = state.gameField[tmpX][y];
-        // el2.moveTo.y = "-52px";
         el2.moveTo.x = "0px";
         state.gameField[tmpX][y].color =
           tmpX > 0 ? state.gameField[tmpX - 1][y].color : getRandomColor();
-        // state.gameField[tmpX][y].isDrop = true;
         if (!ids.has(`${el2.position.x}-${el2.position.y}`)) {
           fields.push(el2);
           ids.add(`${el2.position.x}-${el2.position.y}`);
         }
       }
-      // await delay(0.2);
-      // for (let tmpX = x; tmpX >= 0; tmpX--) {
-      //   state.gameField[tmpX][y].isDrop = false;
-      //   state.gameField[tmpX][y].isPicked = false;
-      // }
-      // await delay(0.1);
     }
   }
-  console.log(
-    JSON.stringify(fields.sort((a, b) => b.position.x - a.position.x))
-  );
   fields
     .sort((a, b) => b.position.x - a.position.x)
     .forEach((el) => {
@@ -179,7 +158,7 @@ async function dropColumn(y: number): Promise<void> {
       el.isReadyToClear = false;
       el.isDrop = true;
     });
-  await delay(10);
+  await delay(0.6);
   fields.forEach((el) => {
     el.isDrop = false;
     el.isPicked = false;
@@ -199,7 +178,7 @@ async function reset(): Promise<void> {
   let needShuffle = true;
   do {
     const elsToMove = new Set<string>();
-    for (let y = 0; y < settings.countLines; y++) {
+    for (let y = 0; y < settings.countColumns; y++) {
       for (let x = 0; x < settings.countRows; x++) {
         const el = state.gameField[y][x];
         const elsToRemove = checkAround(el);
@@ -261,6 +240,8 @@ async function makeError(el1: GameField, el2: GameField): Promise<unknown> {
   return new Promise((resolve) => {
     el1.isErrorState = true;
     el2.isErrorState = true;
+    el1.isPicked = false;
+    el2.isPicked = false;
     setTimeout(() => {
       el1.isErrorState = false;
       el2.isErrorState = false;
@@ -323,7 +304,6 @@ function checkAround(el: GameField): GameField[] {
   }
   result.forEach((elem) => {
     elem.isReadyToClear = true;
-    elem.isPicked = true;
   });
   return result;
 }
@@ -415,20 +395,20 @@ function checkAround(el: GameField): GameField[] {
     margin: 6px;
   }
 
-  & .--active {
+  .--active {
     border-radius: 4px;
     border: 2px solid blueviolet;
     transform: scale(1.2);
   }
 
-  .--active.--error {
+  .--error {
     animation-name: shuffleError;
     animation-duration: 0.18s;
     animation-fill-mode: forwards;
     animation-iteration-count: 5;
   }
 
-  .--active.--move {
+  .--move {
     animation-name: swapFields;
     animation-duration: 0.5s;
     animation-fill-mode: forwards;
@@ -445,7 +425,7 @@ function checkAround(el: GameField): GameField[] {
   .--drop {
     transform: translate(var(--move-to-x), var(--move-to-y));
     animation-name: resetPosition;
-    animation-duration: 8s;
+    animation-duration: 0.5s;
     animation-fill-mode: forwards;
     animation-iteration-count: 1;
   }
