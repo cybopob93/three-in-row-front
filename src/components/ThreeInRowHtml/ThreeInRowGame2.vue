@@ -6,12 +6,13 @@ export default {
     const game = new ThreeInRow({
       value: 5,
       name: "Easy",
-      countRows: 15,
-      countColumns: 15,
+      countRows: 5,
+      countColumns: 5,
     });
 
     return {
       game,
+      isDisabled: game.isFullyDisabled,
     };
   },
 };
@@ -20,6 +21,7 @@ export default {
 <template>
   <section
     class="game"
+    :class="{ game__disabled: isDisabled }"
     :style="{
       height: game.settings.countRows * 50 + 'px',
       width: game.settings.countColumns * 50 + 'px',
@@ -43,7 +45,7 @@ export default {
         '--move-to-x': item.moveTo.x,
         '--move-to-y': item.moveTo.y,
       }"
-      @click="game.itemClick(item.id)"
+      @click="game.itemPick(item.id)"
     ></button>
   </section>
 </template>

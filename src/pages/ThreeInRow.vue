@@ -92,7 +92,9 @@ async function reset() {
         </div>
       </div>
     </div>
-    <ThreeInRowGame2 v-if="isGameStarted"></ThreeInRowGame2>
+    <div v-if="isGameStarted" class="three-in-row-view--init">
+      <ThreeInRowGame2/>
+    </div>
   </section>
 </template>
 
