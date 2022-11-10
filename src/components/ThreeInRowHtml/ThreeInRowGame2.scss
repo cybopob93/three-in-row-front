@@ -20,9 +20,8 @@
 
   &__field {
     position: absolute;
-    height: 35px;
-    width: 35px;
-    margin: 10px;
+    height: var(--field-size);
+    width: var(--field-size);
     cursor: pointer;
     outline: none;
     border: none;

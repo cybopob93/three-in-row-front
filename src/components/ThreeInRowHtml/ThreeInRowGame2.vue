@@ -13,6 +13,7 @@ export default {
     return {
       game,
       isDisabled: game.isFullyDisabled,
+      gameFieldSize: ThreeInRow.FIELD_SIZE,
     };
   },
 };
@@ -23,8 +24,7 @@ export default {
     class="game"
     :class="{ game__disabled: isDisabled }"
     :style="{
-      height: game.settings.countRows * 50 + 'px',
-      width: game.settings.countColumns * 50 + 'px',
+      ...game.gameFieldSize,
     }"
   >
     <button
@@ -44,9 +44,12 @@ export default {
         top: item.position.y,
         '--move-to-x': item.moveTo.x,
         '--move-to-y': item.moveTo.y,
+        '--field-size': gameFieldSize - 10 + 'px',
       }"
       @click="game.itemPick(item.id)"
-    ></button>
+    >
+      {{ item.id }}
+    </button>
   </section>
 </template>
 
