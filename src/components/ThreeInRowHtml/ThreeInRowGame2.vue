@@ -4,10 +4,10 @@ import ThreeInRow from "@/core/ThreeInRowHTML/ThreeInRow";
 export default {
   setup() {
     const game = new ThreeInRow({
-      value: 5,
+      value: 4,
       name: "Easy",
-      countRows: 5,
-      countColumns: 5,
+      countRows: 4,
+      countColumns: 4,
     });
 
     return {
@@ -36,7 +36,6 @@ export default {
         '--error': item.isErrorState,
         '--move': item.isMoveState,
         '--clear': item.isReadyToClear,
-        '--drop': item.isDrop,
       }"
       :style="{
         background: `var(${item.color})`,
