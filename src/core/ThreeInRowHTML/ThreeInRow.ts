@@ -1,7 +1,7 @@
 import type { Settings } from "@/models/three-in-row/settings";
-import type { GameField, Color, GameFieldPosition } from "@/models/three-in-row/gameModels";
-import { computed, reactive } from "vue";
-import type { ComputedRef } from "vue";
+import type { Color, GameField, GameFieldPosition } from "@/models/three-in-row/gameModels";
+import type { ComputedRef, Ref, UnwrapRef } from "vue";
+import { computed, reactive, ref } from "vue";
 import type { ReactiveVariable } from "vue/macros";
 import WrongChoiceError from "@/core/errors/WrongChoiceError";
 
@@ -15,14 +15,23 @@ class ThreeInRow {
   readonly isFullyDisabled: ComputedRef;
   private firstPickedItem: IGameField | null = null;
   private secondPickedItem: IGameField | null = null;
+  private isActionOn: Ref<UnwrapRef<boolean>>;
   static FIELD_SIZE = 100;
 
   constructor(settings: Settings) {
     this._settings = settings;
     this._items = reactive(this.generateGameItems());
+    this.isActionOn = ref(true);
     this.isFullyDisabled = computed(() => {
-      return this._items.filter(i => i.isPicked).length >= 2;
+      return this.isActionOn.value || this._items.filter(i => i.isPicked).length >= 2;
     });
+    this.delay(0.5)
+      .then(() => {
+        return this.dropNecessaryFields(false);
+      })
+      .then(() => {
+        this.isActionOn.value = false;
+      });
   }
 
   get gameFieldSize(): { height: string; width: string } {
@@ -79,6 +88,10 @@ class ThreeInRow {
     return this._items.find(({ position }) => position.x === searchPosition.x && position.y === searchPosition.y);
   }
 
+  getItemByMoveTo(searchPosition: GameFieldPosition): IGameField | undefined {
+    return this._items.find(({ moveTo }) => moveTo.x === searchPosition.x && moveTo.y === searchPosition.y);
+  }
+
   generateIdByPosition(position: GameFieldPosition): string {
     return position.x + "_" + position.y;
   }
@@ -127,8 +140,6 @@ class ThreeInRow {
       item.isReadyToClear = false;
       item.isDrop = false;
     });
-    this.firstPickedItem = null;
-    this.secondPickedItem = null;
   }
 
   async swapFields(fPosition?: GameFieldPosition, sPosition?: GameFieldPosition) {
@@ -217,55 +228,43 @@ class ThreeInRow {
     });
   }
 
-  getNextColor(x: number, y: number, currentColor: Color): Color {
-    let searchedY = y - ThreeInRow.FIELD_SIZE;
-    while (searchedY >= 0) {
-      const itemToDrop = this.getItemByPosition({ x, y: searchedY });
-      if (!itemToDrop) {
-        return this.randomColor;
-      }
-      if (currentColor !== itemToDrop.color) {
-        return itemToDrop.color;
-      }
-      searchedY -= ThreeInRow.FIELD_SIZE;
-    }
-
-    return this.randomColor;
+  sortInColumnDesc(a: IGameField, b: IGameField): number {
+    return b.position.y - a.position.y;
   }
 
-  //TODO: has bug when items stays under over item
   async dropItems() {
+    this._items.forEach(item => {
+      if (item.isDrop) {
+        item.isReadyToClear = true;
+      }
+      item.isPicked = false;
+    });
+    await this.delay(0.4);
     const calculatedIds = new Set<string>([]);
-    const sortedItemsToDelete = this._items.filter(i => i.isDrop).sort((a, b) => b.position.y - a.position.y);
-    console.log(
-      "Before make Drop:",
-      sortedItemsToDelete.map(i => JSON.parse(JSON.stringify(i))),
-    );
+    const sortedItemsToDelete = this._items.filter(i => i.isDrop).sort(this.sortInColumnDesc);
     for (const item of sortedItemsToDelete) {
       if (calculatedIds.has(item.id)) {
         continue;
       }
-      let lastY = item.position.y;
+      const columnWhereDropColors = this._items
+        .filter(i => i.position.x === item.position.x && i.position.y <= item.position.y && !i.isDrop)
+        .sort(this.sortInColumnDesc)
+        .map(i => i.color);
+
       const coefficientToUp = sortedItemsToDelete.filter(i => i.position.x === item.position.x).length;
       for (let y = item.position.y; y >= 0; y -= ThreeInRow.FIELD_SIZE) {
-        const itemToDrop = this.getItemByPosition({ x: item.position.x, y });
+        const itemToDrop = this.getItemByMoveTo({ x: item.position.x, y });
         if (!itemToDrop) {
           continue;
         }
-        itemToDrop.color = this.getNextColor(item.position.x, lastY, itemToDrop.color);
+        itemToDrop.color = columnWhereDropColors.shift() || this.randomColor;
         itemToDrop.moveTo.y = itemToDrop.position.y;
         itemToDrop.position.y = y - ThreeInRow.FIELD_SIZE * coefficientToUp;
         itemToDrop.isDrop = true;
         itemToDrop.isReadyToClear = false;
-        lastY = itemToDrop.position.y;
         calculatedIds.add(itemToDrop.id);
       }
     }
-    console.log("ids to drop:", [...calculatedIds]);
-    console.log(
-      "state after marks:",
-      this._items.filter(i => i.isDrop).map(i => JSON.parse(JSON.stringify(i))),
-    );
     await this.delay(0.2);
     this._items.forEach(item => {
       if (item.isDrop) {
@@ -277,26 +276,28 @@ class ThreeInRow {
     this._items.forEach(item => {
       item.position.y = item.moveTo.y;
     });
-    await this.delay(0.1);
   }
 
   async markToDrop() {
     await Promise.all([this.horizontalMarkDrop(), this.verticalMarkDrop()]);
-    const itemsToDropLength = this._items.filter(i => i.isDrop).length;
-    if (itemsToDropLength === 0) {
-      this.markPickedItemsAsError();
-      await this.delay(0.3);
-      await this.swapFields(this.secondPickedItem?.position, this.firstPickedItem?.position);
-      throw new Error("No fields to remove.");
-    }
-    this._items.forEach(item => {
-      if (item.isDrop) {
-        item.isReadyToClear = true;
+  }
+
+  async dropNecessaryFields(generateErrorOnFirstTry = true) {
+    let firsAndError = generateErrorOnFirstTry;
+    let itemsToDropCount = 0;
+    do {
+      await this.markToDrop();
+      itemsToDropCount = this._items.filter(i => i.isDrop).length;
+      if (itemsToDropCount === 0 && firsAndError) {
+        this.markPickedItemsAsError();
+        await this.delay(0.3);
+        await this.swapFields(this.secondPickedItem?.position, this.firstPickedItem?.position);
+        throw new Error("No fields to remove.");
       }
-      item.isPicked = false;
-    });
-    await this.delay(0.4);
-    await this.dropItems();
+      await this.dropItems();
+      this.resetGameFieldStates();
+      firsAndError = false;
+    } while (itemsToDropCount > 0);
   }
 
   async itemPick(id: string) {
@@ -307,11 +308,12 @@ class ThreeInRow {
     }
 
     try {
+      this.isActionOn.value = true;
       const [firstItem, secondItem] = this.pickedItems;
       this.firstPickedItem = JSON.parse(JSON.stringify(firstItem)) as IGameField;
       this.secondPickedItem = JSON.parse(JSON.stringify(secondItem)) as IGameField;
       await this.swapFields(this.firstPickedItem.position, this.secondPickedItem.position);
-      await this.markToDrop();
+      await this.dropNecessaryFields();
     } catch (e) {
       if (e instanceof WrongChoiceError) {
         this.markPickedItemsAsError();
@@ -324,6 +326,7 @@ class ThreeInRow {
       this.resetGameFieldStates();
       this.firstPickedItem = null;
       this.secondPickedItem = null;
+      this.isActionOn.value = false;
     }
   }
 }
