@@ -4,6 +4,7 @@ import type { ComputedRef, Ref, UnwrapRef } from "vue";
 import { computed, reactive, ref } from "vue";
 import type { ReactiveVariable } from "vue/macros";
 import WrongChoiceError from "@/core/errors/WrongChoiceError";
+import ItemNotFoundError from "@/core/errors/ItemNotFoundError";
 
 interface IGameField extends GameField {
   id: string;
@@ -18,9 +19,9 @@ class ThreeInRow {
   private isActionOn: Ref<UnwrapRef<boolean>>;
   static FIELD_SIZE = 100;
 
-  constructor(settings: Settings) {
-    this._settings = settings;
-    this._items = reactive(this.generateGameItems());
+  constructor(settings: Settings, gameFields?: IGameField[]) {
+    this._settings = JSON.parse(JSON.stringify(settings));
+    this._items = reactive(gameFields || this.generateGameItems());
     this.isActionOn = ref(true);
     this.isFullyDisabled = computed(() => {
       return this.isActionOn.value || this._items.filter(i => i.isPicked).length >= 2;
@@ -34,10 +35,18 @@ class ThreeInRow {
       });
   }
 
+  get rowSize(): number {
+    return ThreeInRow.FIELD_SIZE * this._settings.countRows;
+  }
+
+  get columnSize(): number {
+    return ThreeInRow.FIELD_SIZE * this._settings.countColumns;
+  }
+
   get gameFieldSize(): { height: string; width: string } {
     return {
-      height: this.settings.countRows * ThreeInRow.FIELD_SIZE + "px",
-      width: this.settings.countColumns * ThreeInRow.FIELD_SIZE + "px",
+      height: this.rowSize + "px",
+      width: this.columnSize + "px",
     };
   }
 
@@ -84,8 +93,16 @@ class ThreeInRow {
     return [firstItem, secondItem];
   }
 
-  getItemByPosition(searchPosition: GameFieldPosition): IGameField | undefined {
-    return this._items.find(({ position }) => position.x === searchPosition.x && position.y === searchPosition.y);
+  get countItemsToDelete(): number {
+    return this._items.filter(i => i.isDrop).length;
+  }
+
+  getItemByPosition(searchPosition: GameFieldPosition): IGameField {
+    const item = this._items.find(({ position }) => position.x === searchPosition.x && position.y === searchPosition.y);
+    if (!item) {
+      throw new Error(`Can't find items by coords[${searchPosition.x}, ${searchPosition.y}]`);
+    }
+    return item;
   }
 
   getItemByMoveTo(searchPosition: GameFieldPosition): IGameField | undefined {
@@ -98,8 +115,8 @@ class ThreeInRow {
 
   generateGameItems() {
     const result = [];
-    for (let y = 0; y < this.settings.countRows * ThreeInRow.FIELD_SIZE; y += ThreeInRow.FIELD_SIZE) {
-      for (let x = 0; x < this.settings.countColumns * ThreeInRow.FIELD_SIZE; x += ThreeInRow.FIELD_SIZE) {
+    for (let y = 0; y < this.rowSize; y += ThreeInRow.FIELD_SIZE) {
+      for (let x = 0; x < this.columnSize; x += ThreeInRow.FIELD_SIZE) {
         result.push({
           id: this.generateIdByPosition({ x, y }),
           position: {
@@ -129,7 +146,11 @@ class ThreeInRow {
   }
 
   getItem(id: string): IGameField {
-    return this._items.find(i => i.id === id) || this._items[0];
+    const item = this._items.find(i => i.id === id);
+    if (!item) {
+      throw new ItemNotFoundError();
+    }
+    return item;
   }
 
   resetGameFieldStates() {
@@ -158,10 +179,7 @@ class ThreeInRow {
     secondItem.isMoveState = false;
   }
 
-  modifyItemsToDrop(itemsToDrop: IGameField[], currentItem?: IGameField, nextItem?: IGameField): IGameField[] {
-    if (!nextItem || !currentItem) {
-      return [];
-    }
+  modifyItemsToDrop(itemsToDrop: IGameField[], currentItem: IGameField, nextItem: IGameField): IGameField[] {
     if (currentItem.color === nextItem.color) {
       const itsAlreadyAdded = itemsToDrop.find(i => i.id === currentItem.id);
       if (!itsAlreadyAdded) {
@@ -180,13 +198,9 @@ class ThreeInRow {
   }
 
   async horizontalMarkDrop() {
-    for (let y = 0; y < this.settings.countRows * ThreeInRow.FIELD_SIZE; y += ThreeInRow.FIELD_SIZE) {
+    for (let y = 0; y < this.rowSize; y += ThreeInRow.FIELD_SIZE) {
       let itemsToDrop: IGameField[] = [];
-      for (
-        let x = 0;
-        x < this.settings.countColumns * ThreeInRow.FIELD_SIZE - ThreeInRow.FIELD_SIZE;
-        x += ThreeInRow.FIELD_SIZE
-      ) {
+      for (let x = 0; x < this.columnSize - ThreeInRow.FIELD_SIZE; x += ThreeInRow.FIELD_SIZE) {
         const currentItem = this.getItemByPosition({ x, y });
         const nextItem = this.getItemByPosition({ x: x + ThreeInRow.FIELD_SIZE, y });
         itemsToDrop = this.modifyItemsToDrop(itemsToDrop, currentItem, nextItem);
@@ -200,13 +214,9 @@ class ThreeInRow {
   }
 
   async verticalMarkDrop() {
-    for (let x = 0; x < this.settings.countColumns * ThreeInRow.FIELD_SIZE; x += ThreeInRow.FIELD_SIZE) {
+    for (let x = 0; x < this.columnSize; x += ThreeInRow.FIELD_SIZE) {
       let itemsToDrop: IGameField[] = [];
-      for (
-        let y = 0;
-        y < this.settings.countRows * ThreeInRow.FIELD_SIZE - ThreeInRow.FIELD_SIZE;
-        y += ThreeInRow.FIELD_SIZE
-      ) {
+      for (let y = 0; y < this.rowSize - ThreeInRow.FIELD_SIZE; y += ThreeInRow.FIELD_SIZE) {
         const currentItem = this.getItemByPosition({ x, y });
         const nextItem = this.getItemByPosition({ y: y + ThreeInRow.FIELD_SIZE, x });
         itemsToDrop = this.modifyItemsToDrop(itemsToDrop, currentItem, nextItem);
@@ -287,15 +297,16 @@ class ThreeInRow {
     let itemsToDropCount = 0;
     do {
       await this.markToDrop();
-      itemsToDropCount = this._items.filter(i => i.isDrop).length;
+      itemsToDropCount = this.countItemsToDelete;
       if (itemsToDropCount === 0 && firsAndError) {
         this.markPickedItemsAsError();
         await this.delay(0.3);
         await this.swapFields(this.secondPickedItem?.position, this.firstPickedItem?.position);
         throw new Error("No fields to remove.");
+      } else if (itemsToDropCount > 0) {
+        await this.dropItems();
+        this.resetGameFieldStates();
       }
-      await this.dropItems();
-      this.resetGameFieldStates();
       firsAndError = false;
     } while (itemsToDropCount > 0);
   }
@@ -326,8 +337,86 @@ class ThreeInRow {
       this.resetGameFieldStates();
       this.firstPickedItem = null;
       this.secondPickedItem = null;
+      console.clear();
+      const res = await this.checkAvailabilityToMove();
+      console.log(res);
+      if (!res) {
+        alert("no more movies");
+      }
       this.isActionOn.value = false;
     }
+  }
+  async checkAvailabilityToMove(): Promise<boolean> {
+    const [verticalCheck, horizontalCheck] = await Promise.all([
+      this.availabilityToMoveVertical(),
+      this.availabilityToMoveHorizontal(),
+    ]);
+
+    return horizontalCheck || verticalCheck;
+  }
+
+  async availabilityToMoveVertical(): Promise<boolean> {
+    for (let x = 0; x < this.columnSize; x += ThreeInRow.FIELD_SIZE) {
+      const startItem = this.getItemByPosition({ x, y: 0 });
+      let color = startItem.color;
+      let skippedItems = 0;
+      let index = 1;
+      let sameColorsCombo = 1;
+      for (let y = ThreeInRow.FIELD_SIZE; y < this.rowSize; y += ThreeInRow.FIELD_SIZE) {
+        const nextItem = this.getItemByPosition({ x, y });
+        if (color === nextItem.color) {
+          sameColorsCombo++;
+          if (skippedItems === 1 && sameColorsCombo >= 3) {
+            return true;
+          }
+          continue;
+        }
+
+        if (skippedItems === 0) {
+          skippedItems++;
+          continue;
+        }
+
+        skippedItems = 0;
+        sameColorsCombo = 1;
+        index++;
+        const newItemToStartCheck = this.getItemByPosition({ x, y: ThreeInRow.FIELD_SIZE * index });
+        color = newItemToStartCheck.color;
+      }
+    }
+    return false;
+  }
+
+  async availabilityToMoveHorizontal(): Promise<boolean> {
+    for (let y = 0; y < this.rowSize; y += ThreeInRow.FIELD_SIZE) {
+      const startItem = this.getItemByPosition({ x: 0, y });
+      let color = startItem.color;
+      let skippedItems = 0;
+      let index = 1;
+      let sameColorsCombo = 1;
+      for (let x = ThreeInRow.FIELD_SIZE; x < this.columnSize; x += ThreeInRow.FIELD_SIZE) {
+        const nextItem = this.getItemByPosition({ x, y });
+        if (color === nextItem.color) {
+          sameColorsCombo++;
+          if (skippedItems === 1 && sameColorsCombo >= 3) {
+            return true;
+          }
+          continue;
+        }
+
+        if (skippedItems === 0) {
+          skippedItems++;
+          continue;
+        }
+
+        skippedItems = 0;
+        sameColorsCombo = 1;
+        index++;
+        const newItemToStartCheck = this.getItemByPosition({ x: ThreeInRow.FIELD_SIZE * index, y });
+        color = newItemToStartCheck.color;
+      }
+    }
+    return false;
   }
 }
 
