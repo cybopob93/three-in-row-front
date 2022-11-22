@@ -373,6 +373,17 @@ class ThreeInRow {
         }
 
         if (skippedItems === 0) {
+          if (x > 0) {
+            const leftItem = this.getItemByPosition({ x: x - ThreeInRow.FIELD_SIZE, y });
+            leftItem.color === color && sameColorsCombo++;
+          }
+          if (x < this.columnSize - ThreeInRow.FIELD_SIZE) {
+            const rightItem = this.getItemByPosition({ x: x + ThreeInRow.FIELD_SIZE, y });
+            rightItem.color === color && sameColorsCombo++;
+          }
+          if (sameColorsCombo >= 3) {
+            return true;
+          }
           skippedItems++;
           continue;
         }
@@ -405,6 +416,17 @@ class ThreeInRow {
         }
 
         if (skippedItems === 0) {
+          if (y > 0) {
+            const topItem = this.getItemByPosition({ x, y: y - ThreeInRow.FIELD_SIZE });
+            topItem.color === color && sameColorsCombo++;
+          }
+          if (y < this.rowSize - ThreeInRow.FIELD_SIZE) {
+            const bottomItem = this.getItemByPosition({ x, y: y + ThreeInRow.FIELD_SIZE });
+            bottomItem.color === color && sameColorsCombo++;
+          }
+          if (sameColorsCombo >= 3) {
+            return true;
+          }
           skippedItems++;
           continue;
         }
