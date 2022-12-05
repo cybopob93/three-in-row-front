@@ -52,9 +52,7 @@ class ThreeInRow {
 
   get randomColor(): Color {
     const colors = ["--vt-c-indigo-mute", "--vt-c-dark", "--vt-c-indigo", "--vt-c-red-dark", "--vt-c-orange"];
-    const randomIndex = Math.floor(
-      Math.random() * (colors.length < this.settings.value ? colors.length : this.settings.value),
-    );
+    const randomIndex = Math.floor(Math.random() * colors.length);
     return colors[randomIndex] as Color;
   }
 

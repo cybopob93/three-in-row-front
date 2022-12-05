@@ -1,14 +1,11 @@
 <script lang="ts">
 import ThreeInRow from "@/core/ThreeInRowHTML/ThreeInRow";
+import { useSettingsStore } from "@/stores/settings";
 
 export default {
   setup() {
-    const game = new ThreeInRow({
-      value: 5,
-      name: "Easy",
-      countRows: 5,
-      countColumns: 5,
-    });
+    const settingsStore = useSettingsStore();
+    const game = new ThreeInRow(settingsStore.settings);
 
     return {
       game,

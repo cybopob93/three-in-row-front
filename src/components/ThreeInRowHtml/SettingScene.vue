@@ -1,29 +1,27 @@
 <script lang="ts" setup>
 import BaseButton from "@/components/Base/BaseButton.vue";
 import { UiStates } from "@/models/ui.d";
-import { computed } from "vue";
-import { Settings } from "@/models/three-in-row/settings";
+import { computed, ref } from "vue";
+import { GameDifficulty } from "@/models/three-in-row/settings.d";
+import { useSettingsStore } from "@/stores/settings";
 
-const gameDifficulty: Array<Settings> = [
+const gameDifficultyVariants: Array<{ value: GameDifficulty; name: string }> = [
   {
-    value: 5,
+    value: GameDifficulty.EASY,
     name: "Easy",
-    countRows: 5,
-    countColumns: 5,
   },
   {
-    value: 7,
+    value: GameDifficulty.MEDIUM,
     name: "Medium",
-    countRows: 7,
-    countColumns: 7,
   },
   {
-    value: 10,
+    value: GameDifficulty.HARD,
     name: "Hard",
-    countRows: 10,
-    countColumns: 10,
   },
 ];
+
+const settingsStore = useSettingsStore();
+const gameDifficulty = ref<GameDifficulty>(settingsStore.settings.difficulty);
 
 const emit = defineEmits<{
   (e: "updateGameScene", value: UiStates): void;
@@ -32,7 +30,7 @@ const emit = defineEmits<{
 const uiStatuses = computed(() => UiStates);
 
 const saveSettings = () => {
-  console.log("setup settings to store");
+  settingsStore.updateGameDifficult(gameDifficulty.value);
   emit("updateGameScene", UiStates.START);
 };
 </script>
@@ -41,13 +39,19 @@ const saveSettings = () => {
   <div class="setting-scene">
     <div>
       <h2>Game difficult:</h2>
-      <div v-for="variant in gameDifficulty" :key="variant.name">
+      <div v-for="variant in gameDifficultyVariants" :key="variant.name">
         <label :for="variant.name">{{ variant.name }}</label>
-        <input :id="variant.name" type="radio" />
+        <input
+          :id="variant.name"
+          type="radio"
+          :value="variant.value"
+          :checked="gameDifficulty === variant.value"
+          @change="gameDifficulty = variant.value"
+        />
       </div>
     </div>
     <base-button @click="saveSettings">Save settings</base-button>
-    <button @click="$emit('updateGameScene', uiStatuses.START)">Back to menu</button>
+    <a href="#" @click="$emit('updateGameScene', uiStatuses.START)">Back to menu</a>
   </div>
 </template>
 
