@@ -46,12 +46,10 @@ export default {
         '--field-size': gameFieldSize - 10 + 'px',
       }"
       @click="game.itemPick(item.id)"
-    >
-      {{ item.id }}
-    </button>
+    ></button>
   </section>
 </template>
 
 <style lang="scss" scoped>
-@import "./ThreeInRowGame2.scss";
+@import "GameScene";
 </style>

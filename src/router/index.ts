@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from "vue-router";
-import HomeView from "../views/HomeView.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -18,13 +17,8 @@ const router = createRouter({
           path: "3-in-row-html",
           name: "3-in-row-html",
           component: () => import("../pages/ThreeInRow.vue"),
-        }
-      ]
-    },
-    {
-      path: "/h",
-      name: "home",
-      component: HomeView,
+        },
+      ],
     },
     {
       path: "/about",

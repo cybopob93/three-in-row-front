@@ -337,9 +337,7 @@ class ThreeInRow {
       this.resetGameFieldStates();
       this.firstPickedItem = null;
       this.secondPickedItem = null;
-      console.clear();
       const res = await this.checkAvailabilityToMove();
-      console.log(res);
       if (!res) {
         alert("no more movies");
       }

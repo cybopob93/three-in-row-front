@@ -11,13 +11,13 @@ const links: Array<GameCard> = [
     stats: [
       {
         value: "1k",
-        code: "count_games"
+        code: "count_games",
       },
       {
         value: "1k",
-        code: "currently_played"
-      }
-    ]
+        code: "currently_played",
+      },
+    ],
   },
   {
     link: "/games/3-in-row-canvas",
@@ -27,13 +27,13 @@ const links: Array<GameCard> = [
     stats: [
       {
         value: "1k",
-        code: "count_games"
+        code: "count_games",
       },
       {
         value: "1k",
-        code: "currently_played"
-      }
-    ]
+        code: "currently_played",
+      },
+    ],
   },
 ];
 </script>
