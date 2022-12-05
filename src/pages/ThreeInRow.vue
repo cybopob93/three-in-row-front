@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive } from "vue";
 import GameScene from "@/components/ThreeInRowHtml/GameScene/GameScene.vue";
-import { UiStates } from "@/core/ThreeInRowHTML/models/ui.d";
+import { UiStates } from "@/models/ui.d";
 import StartScene from "@/components/ThreeInRowHtml/StartScene.vue";
 import BasePageTitle from "@/components/Base/BasePageTitle.vue";
 import SettingScene from "@/components/ThreeInRowHtml/SettingScene.vue";

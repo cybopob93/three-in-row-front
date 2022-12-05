@@ -1,6 +1,6 @@
 <script lang="ts">
 import BaseButton from "@/components/Base/BaseButton.vue";
-import { UiStates } from "@/core/ThreeInRowHTML/models/ui.d";
+import { UiStates } from "@/models/ui.d";
 
 export default {
   components: { BaseButton },
