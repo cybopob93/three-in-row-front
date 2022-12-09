@@ -70,4 +70,52 @@
     animation-fill-mode: forwards;
     animation-iteration-count: 1;
   }
+
+  &.square {
+
+  }
+
+  &.circle {
+    border-radius: 50%;
+    background-color: #3E54FA;
+  }
+
+  &.diamond {
+    background-color: #9E1B1B;
+    clip-path: polygon(0% 30%, 30% 0%, 70% 0%, 100% 30%, 50% 100%);
+  }
+
+  &.triangle {
+    background-color: #75A2FC;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  }
+
+  &.star {
+    background-color: #251E39;
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  }
+
+
+  &.pentagon {
+    background-color: #FF5E2B;
+    clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+  }
+
+
+  &.hexagon {
+    background-color: chartreuse;
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  }
+
+
+  &.octagon {
+    background-color: #75A2FC;
+    clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+  }
+
+
+  &.rabbet {
+    background-color: darkorchid;
+    clip-path: polygon(0% 15%, 15% 15%, 15% 0%, 85% 0%, 85% 15%, 100% 15%, 100% 85%, 85% 85%, 85% 100%, 15% 100%, 15% 85%, 0% 85%);;
+  }
 }

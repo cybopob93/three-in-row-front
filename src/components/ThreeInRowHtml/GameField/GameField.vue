@@ -1,11 +1,11 @@
 <script lang="ts" setup>
 import ThreeInRow from "@/core/ThreeInRowHTML/ThreeInRow";
-import { Color, GameFieldPosition } from "@/models/three-in-row/gameModels";
+import { FieldType, GameFieldPosition } from "@/models/three-in-row/gameModels.d";
 
 interface IProps {
   id: string;
   position: GameFieldPosition;
-  color: Color;
+  fieldType: FieldType;
   isErrorState: boolean;
   isPicked: boolean;
   isMoveState: boolean;
@@ -24,19 +24,21 @@ const emit = defineEmits<{
 <template>
   <button
     class="game-field"
-    :class="{
-      '--active': isPicked,
-      '--error': isErrorState,
-      '--move': isMoveState,
-      '--clear': isReadyToClear,
-    }"
+    :class="[
+      {
+        '--active': isPicked,
+        '--error': isErrorState,
+        '--move': isMoveState,
+        '--clear': isReadyToClear,
+      },
+      fieldType,
+    ]"
     :style="{
-      background: `var(${color})`,
       left: position.x,
       top: position.y,
       '--move-to-x': moveTo.x,
       '--move-to-y': moveTo.y,
-      '--field-size': gameFieldSize - 10 + 'px',
+      '--field-size': gameFieldSize - 15 + 'px',
     }"
     @click="emit('pick', id)"
   ></button>

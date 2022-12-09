@@ -1,6 +1,14 @@
-import Colors from "@/models/three-in-row/colors";
-
-export type Color = keyof typeof Colors;
+export enum FieldType {
+  SQUARE = "square",
+  CIRCLE = "circle",
+  DIAMOND = "diamond",
+  TRIANGLE = "triangle",
+  STAR = "star",
+  PENTAGON = "pentagon",
+  HEXAGON = "hexagon",
+  OCTAGON = "octagon",
+  RABBET = "rabbet",
+}
 
 export interface GameFieldPosition {
   x: number;
@@ -8,8 +16,9 @@ export interface GameFieldPosition {
 }
 
 export interface GameField {
+  id: string;
   position: GameFieldPosition;
-  color: Color;
+  fieldType: FieldType;
   isErrorState: boolean;
   isPicked: boolean;
   isMoveState: boolean;
