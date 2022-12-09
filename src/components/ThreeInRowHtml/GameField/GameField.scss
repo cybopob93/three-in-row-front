@@ -1,0 +1,73 @@
+@keyframes shuffleError {
+  0% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(0.9);
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  75% {
+    transform: scale(0.95);
+  }
+  95% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes move {
+  100% {
+    left: var(--move-to-x);
+    top: var(--move-to-y);
+  }
+}
+
+@keyframes clear {
+  100% {
+    transform: scale(0.5);
+  }
+}
+
+.game-field {
+  position: absolute;
+  height: var(--field-size);
+  width: var(--field-size);
+  cursor: pointer;
+  outline: none;
+  border: none;
+  padding: 0;
+  transition: transform ease 0.4s;
+
+
+  &.--active {
+    border-radius: 4px;
+    transform: scale(1.1);
+  }
+
+  &.--error {
+    animation-name: shuffleError;
+    animation-duration: 0.4s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: 2;
+  }
+
+  &.--move {
+    animation-name: move;
+    animation-duration: 0.5s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: 1;
+  }
+
+  &.--clear {
+    transition: opacity ease 0.15s;
+    opacity: 0;
+    animation-name: clear;
+    animation-duration: 0.3s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: 1;
+  }
+}

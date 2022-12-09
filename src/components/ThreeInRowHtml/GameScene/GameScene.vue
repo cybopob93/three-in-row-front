@@ -1,8 +1,10 @@
 <script lang="ts">
 import ThreeInRow from "@/core/ThreeInRowHTML/ThreeInRow";
 import { useSettingsStore } from "@/stores/settings";
+import GameField from "@/components/ThreeInRowHtml/GameField/GameField.vue";
 
 export default {
+  components: { GameField },
   setup() {
     const settingsStore = useSettingsStore();
     const game = new ThreeInRow(settingsStore.settings);
@@ -24,26 +26,7 @@ export default {
       ...game.gameFieldSize,
     }"
   >
-    <button
-      v-for="item in game.items"
-      :key="item.id"
-      class="game__field"
-      :class="{
-        '--active': item.isPicked,
-        '--error': item.isErrorState,
-        '--move': item.isMoveState,
-        '--clear': item.isReadyToClear,
-      }"
-      :style="{
-        background: `var(${item.color})`,
-        left: item.position.x,
-        top: item.position.y,
-        '--move-to-x': item.moveTo.x,
-        '--move-to-y': item.moveTo.y,
-        '--field-size': gameFieldSize - 10 + 'px',
-      }"
-      @click="game.itemPick(item.id)"
-    ></button>
+    <game-field v-for="item in game.items" :key="item.id" v-bind="item" @pick="id => game.itemPick(id)" />
   </section>
 </template>
 
