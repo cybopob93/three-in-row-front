@@ -7,12 +7,12 @@ import WrongChoiceError from "@/core/errors/WrongChoiceError";
 import ItemNotFoundError from "@/core/errors/ItemNotFoundError";
 import { FieldType } from "@/models/three-in-row/gameModels.d";
 
+type CheckFields = null | false | GameField;
+
 class ThreeInRow {
   private readonly _settings: Settings;
   private readonly _items: ReactiveVariable<GameField[]>;
   readonly isFullyDisabled: ComputedRef;
-  private firstPickedItem: GameField | null = null;
-  private secondPickedItem: GameField | null = null;
   private isActionOn: Ref<UnwrapRef<boolean>>;
   static FIELD_SIZE = 100;
 
@@ -159,10 +159,7 @@ class ThreeInRow {
     });
   }
 
-  async swapFields(fPosition?: GameFieldPosition, sPosition?: GameFieldPosition) {
-    if (!fPosition || !sPosition) {
-      throw new WrongChoiceError();
-    }
+  async swapFields(fPosition: GameFieldPosition, sPosition: GameFieldPosition) {
     const [firstItem, secondItem] = this.pickedItems;
     firstItem.moveTo = { x: sPosition.x, y: sPosition.y };
     secondItem.moveTo = { x: fPosition.x, y: fPosition.y };
@@ -297,7 +294,8 @@ class ThreeInRow {
       if (itemsToDropCount === 0 && firsAndError) {
         this.markPickedItemsAsError();
         await this.delay(0.3);
-        await this.swapFields(this.secondPickedItem?.position, this.firstPickedItem?.position);
+        const [firstItem, secondItem] = this.pickedItems;
+        await this.swapFields(firstItem.position, secondItem.position);
         throw new Error("No fields to remove.");
       } else if (itemsToDropCount > 0) {
         await this.dropItems();
@@ -317,10 +315,8 @@ class ThreeInRow {
     try {
       this.isActionOn.value = true;
       const [firstItem, secondItem] = this.pickedItems;
-      this.firstPickedItem = JSON.parse(JSON.stringify(firstItem)) as GameField;
-      this.secondPickedItem = JSON.parse(JSON.stringify(secondItem)) as GameField;
-      await this.swapFields(this.firstPickedItem.position, this.secondPickedItem.position);
-      await this.dropNecessaryFields();
+      await this.swapFields(firstItem.position, secondItem.position);
+      await this.dropNecessaryFields(true);
     } catch (e) {
       if (e instanceof WrongChoiceError) {
         this.markPickedItemsAsError();
@@ -331,8 +327,6 @@ class ThreeInRow {
       }
     } finally {
       this.resetGameFieldStates();
-      this.firstPickedItem = null;
-      this.secondPickedItem = null;
       const res = await this.checkAvailabilityToMove();
       if (!res) {
         alert("no more movies");
@@ -340,25 +334,49 @@ class ThreeInRow {
       this.isActionOn.value = false;
     }
   }
-  async checkAvailabilityToMove(): Promise<boolean> {
-    const checkResults = await Promise.all([
-      this.availabilityToMoveVertical(),
-      this.availabilityToMoveVertical(true),
-      this.availabilityToMoveHorizontal(),
-      this.availabilityToMoveHorizontal(true),
-    ]);
 
-    return checkResults.some(i => i);
+  checkAvailabilityToMove(): boolean {
+    for (let x = 0; x < this.columnSize - ThreeInRow.FIELD_SIZE; x += ThreeInRow.FIELD_SIZE) {
+      for (let y = 0; y < this.rowSize - ThreeInRow.FIELD_SIZE; y += ThreeInRow.FIELD_SIZE) {
+        const checkedItem = this.getItemByPosition({ x, y });
+        const forwardItems = this.getForwardItemsToCheck(checkedItem.position);
+        if (forwardItems === null) {
+          continue;
+        }
+        switch (true) {
+          case checkedItem.fieldType === forwardItems[0].fieldType: {
+            // TODO: check around forwardItems[1] to have same field type as checkedItem exclude position forwardItems[0]
+            break;
+          }
+          case checkedItem.fieldType === forwardItems[1].fieldType: {
+            // TODO: check around forwardItems[0] to have same field type as checkedItem exclude position forwardItems[1]
+            break;
+          }
+        }
+      }
+    }
+    return false;
   }
 
-  async checkAvailabilityToMove2(): Promise<boolean> {
-    const x1 = this.availabilityToMoveVertical();
-    const x2 = this.availabilityToMoveVertical(true);
-    const x3 = this.availabilityToMoveHorizontal();
-    const x4 = this.availabilityToMoveHorizontal(true);
-    const checkResults = [x1, x2, x3, x4];
-
-    return checkResults.some(i => i);
+  getForwardItemsToCheck(startPosition: GameFieldPosition): [GameField, GameField] | null {
+    if (
+      startPosition.x + ThreeInRow.FIELD_SIZE >= this.columnSize ||
+      startPosition.y + ThreeInRow.FIELD_SIZE >= this.rowSize ||
+      startPosition.x + ThreeInRow.FIELD_SIZE * 2 >= this.columnSize ||
+      startPosition.y + ThreeInRow.FIELD_SIZE * 2 >= this.rowSize
+    ) {
+      return null;
+    }
+    return [
+      this.getItemByPosition({
+        x: startPosition.x + ThreeInRow.FIELD_SIZE,
+        y: startPosition.y,
+      }),
+      this.getItemByPosition({
+        x: startPosition.x + ThreeInRow.FIELD_SIZE * 2,
+        y: startPosition.y,
+      }),
+    ];
   }
 
   getAroundFieldTypes(x: number, y: number, isHorizontal = true): [FieldType | null, FieldType | null] {

@@ -19,6 +19,11 @@ const gameFieldSize = ThreeInRow.FIELD_SIZE;
 const emit = defineEmits<{
   (e: "pick", id: IProps["id"]): void;
 }>();
+/**
+ <style scoped lang="scss" src="GameField.scss">
+ @import "GameField";
+  </style>
+ */
 </script>
 
 <template>
@@ -46,6 +51,4 @@ const emit = defineEmits<{
   </button>
 </template>
 
-<style scoped lang="scss">
-@import "GameField";
-</style>
+<style scoped lang="scss" src="GameField.scss"></style>
