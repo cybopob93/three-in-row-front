@@ -16,9 +16,9 @@ class ThreeInRow {
   private isActionOn: Ref<UnwrapRef<boolean>>;
   static FIELD_SIZE = 100;
 
-  constructor(settings: Settings, gameFields?: GameField[]) {
+  constructor(settings: Settings) {
     this._settings = JSON.parse(JSON.stringify(settings));
-    this._items = reactive(gameFields || this.generateGameItems());
+    this._items = reactive(this.generateGameItems());
     this.isActionOn = ref(true);
     this.isFullyDisabled = computed(() => {
       return this.isActionOn.value || this._items.filter(i => i.isPicked).length >= 2;
@@ -341,95 +341,124 @@ class ThreeInRow {
     }
   }
   async checkAvailabilityToMove(): Promise<boolean> {
-    const [verticalCheck, horizontalCheck] = await Promise.all([
+    const checkResults = await Promise.all([
       this.availabilityToMoveVertical(),
+      this.availabilityToMoveVertical(true),
       this.availabilityToMoveHorizontal(),
+      this.availabilityToMoveHorizontal(true),
     ]);
 
-    return horizontalCheck || verticalCheck;
+    return checkResults.some(i => i);
   }
 
-  async availabilityToMoveVertical(): Promise<boolean> {
-    for (let x = 0; x < this.columnSize; x += ThreeInRow.FIELD_SIZE) {
-      const startItem = this.getItemByPosition({ x, y: 0 });
-      let fieldType = startItem.fieldType;
-      let skippedItems = 0;
-      let index = 1;
+  async checkAvailabilityToMove2(): Promise<boolean> {
+    const x1 = this.availabilityToMoveVertical();
+    const x2 = this.availabilityToMoveVertical(true);
+    const x3 = this.availabilityToMoveHorizontal();
+    const x4 = this.availabilityToMoveHorizontal(true);
+    const checkResults = [x1, x2, x3, x4];
+
+    return checkResults.some(i => i);
+  }
+
+  getAroundFieldTypes(x: number, y: number, isHorizontal = true): [FieldType | null, FieldType | null] {
+    let firstFieldType: null | FieldType = null;
+    let secondFieldType: null | FieldType = null;
+    if (isHorizontal) {
+      if (x > 0) {
+        firstFieldType = this.getItemByPosition({ x: x - ThreeInRow.FIELD_SIZE, y }).fieldType;
+      }
+      if (x < this.columnSize - ThreeInRow.FIELD_SIZE) {
+        secondFieldType = this.getItemByPosition({ x: x + ThreeInRow.FIELD_SIZE, y }).fieldType;
+      }
+    } else {
+      if (y > 0) {
+        firstFieldType = this.getItemByPosition({ x, y: y - ThreeInRow.FIELD_SIZE }).fieldType;
+      }
+      if (y < this.rowSize - ThreeInRow.FIELD_SIZE) {
+        secondFieldType = this.getItemByPosition({ x, y: y + ThreeInRow.FIELD_SIZE }).fieldType;
+      }
+    }
+    return [firstFieldType, secondFieldType];
+  }
+
+  checkCycleCondition(value: number, isReverse: boolean, maxSize: number): boolean {
+    return isReverse ? value > 0 : value < maxSize;
+  }
+
+  availabilityToMoveVertical(isReverse = false): boolean {
+    const coefficient = ThreeInRow.FIELD_SIZE * (isReverse ? -1 : 1);
+    for (
+      let x = isReverse ? this.columnSize - ThreeInRow.FIELD_SIZE : 0;
+      this.checkCycleCondition(x, isReverse, this.columnSize);
+      x += coefficient
+    ) {
+      let alreadySkipped = false;
+      let startY = isReverse ? this.rowSize + coefficient : 0;
+      let fieldType = this.getItemByPosition({ x, y: startY }).fieldType;
       let sameColorsCombo = 1;
-      for (let y = ThreeInRow.FIELD_SIZE; y < this.rowSize; y += ThreeInRow.FIELD_SIZE) {
-        const nextItem = this.getItemByPosition({ x, y });
-        if (fieldType === nextItem.fieldType) {
+      for (let y = startY + coefficient; this.checkCycleCondition(y, isReverse, this.rowSize); y += coefficient) {
+        const nextFieldType = this.getItemByPosition({ x, y }).fieldType;
+        if (fieldType === nextFieldType) {
           sameColorsCombo++;
-          if (skippedItems === 1 && sameColorsCombo >= 3) {
-            return true;
-          }
           continue;
         }
 
-        if (skippedItems === 0) {
-          if (x > 0) {
-            const leftItem = this.getItemByPosition({ x: x - ThreeInRow.FIELD_SIZE, y });
-            leftItem.fieldType === fieldType && sameColorsCombo++;
-          }
-          if (x < this.columnSize - ThreeInRow.FIELD_SIZE) {
-            const rightItem = this.getItemByPosition({ x: x + ThreeInRow.FIELD_SIZE, y });
-            rightItem.fieldType === fieldType && sameColorsCombo++;
-          }
-          if (sameColorsCombo >= 3) {
-            return true;
-          }
-          skippedItems++;
+        if (alreadySkipped && sameColorsCombo >= 3) {
+          return true;
+        }
+
+        // left and right check on same color
+        if (!alreadySkipped) {
+          const [leftFieldType, rightFieldType] = this.getAroundFieldTypes(x, y);
+          (leftFieldType === fieldType || rightFieldType === fieldType) && sameColorsCombo++;
+          alreadySkipped = true;
           continue;
         }
 
-        skippedItems = 0;
+        alreadySkipped = false;
         sameColorsCombo = 1;
-        index++;
-        const newItemToStartCheck = this.getItemByPosition({ x, y: ThreeInRow.FIELD_SIZE * index });
-        fieldType = newItemToStartCheck.fieldType;
+        startY += coefficient;
+        fieldType = this.getItemByPosition({ x, y: startY }).fieldType;
       }
     }
     return false;
   }
 
-  async availabilityToMoveHorizontal(): Promise<boolean> {
-    for (let y = 0; y < this.rowSize; y += ThreeInRow.FIELD_SIZE) {
-      const startItem = this.getItemByPosition({ x: 0, y });
-      let fieldType = startItem.fieldType;
-      let skippedItems = 0;
-      let index = 1;
+  availabilityToMoveHorizontal(isReverse = false): boolean {
+    const coefficient = ThreeInRow.FIELD_SIZE * (isReverse ? -1 : 1);
+    for (
+      let y = isReverse ? this.rowSize - ThreeInRow.FIELD_SIZE : 0;
+      this.checkCycleCondition(y, isReverse, this.rowSize);
+      y += coefficient
+    ) {
+      let alreadySkipped = false;
+      let startX = isReverse ? this.rowSize + coefficient : 0;
+      let fieldType = this.getItemByPosition({ x: startX, y }).fieldType;
       let sameColorsCombo = 1;
-      for (let x = ThreeInRow.FIELD_SIZE; x < this.columnSize; x += ThreeInRow.FIELD_SIZE) {
-        const nextItem = this.getItemByPosition({ x, y });
-        if (fieldType === nextItem.fieldType) {
+      for (let x = startX + coefficient; this.checkCycleCondition(x, isReverse, this.columnSize); x += coefficient) {
+        const nextFieldType = this.getItemByPosition({ x, y }).fieldType;
+        if (fieldType === nextFieldType) {
           sameColorsCombo++;
-          if (skippedItems === 1 && sameColorsCombo >= 3) {
-            return true;
-          }
           continue;
         }
 
-        if (skippedItems === 0) {
-          if (y > 0) {
-            const topItem = this.getItemByPosition({ x, y: y - ThreeInRow.FIELD_SIZE });
-            topItem.fieldType === fieldType && sameColorsCombo++;
-          }
-          if (y < this.rowSize - ThreeInRow.FIELD_SIZE) {
-            const bottomItem = this.getItemByPosition({ x, y: y + ThreeInRow.FIELD_SIZE });
-            bottomItem.fieldType === fieldType && sameColorsCombo++;
-          }
-          if (sameColorsCombo >= 3) {
-            return true;
-          }
-          skippedItems++;
+        if (alreadySkipped && sameColorsCombo >= 3) {
+          return true;
+        }
+
+        // top and bottom check on same color
+        if (!alreadySkipped) {
+          const [topFieldType, bottomFieldType] = this.getAroundFieldTypes(x, y, false);
+          (topFieldType === fieldType || bottomFieldType === fieldType) && sameColorsCombo++;
+          alreadySkipped = true;
           continue;
         }
 
-        skippedItems = 0;
+        alreadySkipped = false;
         sameColorsCombo = 1;
-        index++;
-        const newItemToStartCheck = this.getItemByPosition({ x: ThreeInRow.FIELD_SIZE * index, y });
-        fieldType = newItemToStartCheck.fieldType;
+        startX += coefficient;
+        fieldType = this.getItemByPosition({ x: startX, y }).fieldType;
       }
     }
     return false;

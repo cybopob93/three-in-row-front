@@ -2,9 +2,10 @@
 import ThreeInRow from "@/core/ThreeInRowHTML/ThreeInRow";
 import { useSettingsStore } from "@/stores/settings";
 import GameField from "@/components/ThreeInRowHtml/GameField/GameField.vue";
+import BaseButton from "@/components/Base/BaseButton.vue";
 
 export default {
-  components: { GameField },
+  components: { BaseButton, GameField },
   setup() {
     const settingsStore = useSettingsStore();
     const game = new ThreeInRow(settingsStore.settings);
@@ -19,6 +20,7 @@ export default {
 </script>
 
 <template>
+  <base-button @click="game.checkAvailabilityToMove2()">Run chceck</base-button>
   <section
     class="game"
     :class="{ game__disabled: isDisabled }"

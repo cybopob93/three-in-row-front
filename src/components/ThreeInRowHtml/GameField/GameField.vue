@@ -41,7 +41,9 @@ const emit = defineEmits<{
       '--field-size': gameFieldSize - 15 + 'px',
     }"
     @click="emit('pick', id)"
-  ></button>
+  >
+    {{ id }}
+  </button>
 </template>
 
 <style scoped lang="scss">
