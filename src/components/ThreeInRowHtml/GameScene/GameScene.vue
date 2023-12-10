@@ -20,7 +20,6 @@ export default {
 </script>
 
 <template>
-  <base-button @click="game.checkAvailabilityToMove()">Run chceck</base-button>
   <section
     class="game"
     :class="{ game__disabled: isDisabled }"

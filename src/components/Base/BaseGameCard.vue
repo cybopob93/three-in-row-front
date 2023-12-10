@@ -21,7 +21,7 @@ const state = reactive({
 });
 
 function getImageUrl(name: string) {
-  return new URL(`../../assets/${name}`, import.meta.url).href
+  return new URL(`../../assets/${name}`, import.meta.url).href;
 }
 
 function changePreviewState() {
@@ -33,12 +33,7 @@ function changePreviewState() {
   <section class="base-game-card">
     <div class="base-game-card__preview">
       <RouterLink class="base-game-card__logo" :to="link">
-        <img
-          :alt="title"
-          :src="getImageUrl(`${logo}`)"
-          width="56"
-          height="56"
-        />
+        <img :alt="title" :src="getImageUrl(`${logo}`)" width="56" height="56" />
       </RouterLink>
       <div class="base-game-card__description">
         <div class="base-game-card__title">
@@ -53,11 +48,7 @@ function changePreviewState() {
       </div>
     </div>
     <div v-show="state.isOpen" class="base-game-card__details">
-      <div
-        v-for="(item, index) in stats"
-        :key="index"
-        class="base-game-card__detail"
-      >
+      <div v-for="(item, index) in stats" :key="index" class="base-game-card__detail">
         <span class="base-game-card__detail-count">{{ item.value }}</span>
         <span class="base-game-card__detail-title">{{ item.code }}</span>
       </div>

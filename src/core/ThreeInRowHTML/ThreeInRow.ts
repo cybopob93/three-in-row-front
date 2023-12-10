@@ -7,7 +7,12 @@ import WrongChoiceError from "@/core/errors/WrongChoiceError";
 import ItemNotFoundError from "@/core/errors/ItemNotFoundError";
 import { FieldType } from "@/models/three-in-row/gameModels.d";
 
-type CheckFields = null | false | GameField;
+enum EDirections {
+  TOP,
+  BOTTOM,
+  LEFT,
+  RIGHT,
+}
 
 class ThreeInRow {
   private readonly _settings: Settings;
@@ -327,159 +332,276 @@ class ThreeInRow {
       }
     } finally {
       this.resetGameFieldStates();
-      const res = await this.checkAvailabilityToMove();
-      if (!res) {
+      const res = this.checkAvailabilityToMove2();
+      if (res.size === 0) {
+        console.error("no more movies");
         alert("no more movies");
       }
       this.isActionOn.value = false;
     }
   }
 
-  checkAvailabilityToMove(): boolean {
-    for (let x = 0; x < this.columnSize - ThreeInRow.FIELD_SIZE; x += ThreeInRow.FIELD_SIZE) {
-      for (let y = 0; y < this.rowSize - ThreeInRow.FIELD_SIZE; y += ThreeInRow.FIELD_SIZE) {
+  checkAvailabilityToMove2(): Set<string> {
+    const availableItemsToMove: Set<string> = new Set<string>();
+    for (let y = 0; y < this.rowSize; y += ThreeInRow.FIELD_SIZE) {
+      for (let x = 0; x < this.columnSize; x += ThreeInRow.FIELD_SIZE) {
         const checkedItem = this.getItemByPosition({ x, y });
-        const forwardItems = this.getForwardItemsToCheck(checkedItem.position);
-        if (forwardItems === null) {
-          continue;
-        }
-        switch (true) {
-          case checkedItem.fieldType === forwardItems[0].fieldType: {
-            // TODO: check around forwardItems[1] to have same field type as checkedItem exclude position forwardItems[0]
-            break;
-          }
-          case checkedItem.fieldType === forwardItems[1].fieldType: {
-            // TODO: check around forwardItems[0] to have same field type as checkedItem exclude position forwardItems[1]
-            break;
-          }
-        }
+        this.checkFieldsAround(checkedItem.position, checkedItem.fieldType).forEach(fieldId => {
+          availableItemsToMove.add(fieldId);
+        });
       }
     }
-    return false;
+    return availableItemsToMove;
   }
 
-  getForwardItemsToCheck(startPosition: GameFieldPosition): [GameField, GameField] | null {
-    if (
-      startPosition.x + ThreeInRow.FIELD_SIZE >= this.columnSize ||
-      startPosition.y + ThreeInRow.FIELD_SIZE >= this.rowSize ||
-      startPosition.x + ThreeInRow.FIELD_SIZE * 2 >= this.columnSize ||
-      startPosition.y + ThreeInRow.FIELD_SIZE * 2 >= this.rowSize
-    ) {
-      return null;
-    }
+  checkFieldsAround(startPosition: GameFieldPosition, fieldType: FieldType) {
     return [
-      this.getItemByPosition({
-        x: startPosition.x + ThreeInRow.FIELD_SIZE,
-        y: startPosition.y,
-      }),
-      this.getItemByPosition({
-        x: startPosition.x + ThreeInRow.FIELD_SIZE * 2,
-        y: startPosition.y,
-      }),
+      ...this.checkTopDirection(startPosition, fieldType),
+      ...this.checkBottomDirection(startPosition, fieldType),
+      ...this.checkLeftDirection(startPosition, fieldType),
+      ...this.checkRightDirection(startPosition, fieldType),
     ];
   }
 
-  getAroundFieldTypes(x: number, y: number, isHorizontal = true): [FieldType | null, FieldType | null] {
-    let firstFieldType: null | FieldType = null;
-    let secondFieldType: null | FieldType = null;
-    if (isHorizontal) {
-      if (x > 0) {
-        firstFieldType = this.getItemByPosition({ x: x - ThreeInRow.FIELD_SIZE, y }).fieldType;
+  checkTopDirection(startPosition: GameFieldPosition, fieldType: FieldType): string[] {
+    const result: string[] = [];
+    const nextTopField = this.getNextExistDirectionFiled(startPosition, EDirections.TOP);
+    if (nextTopField === null) {
+      return result;
+    }
+    const topItem = this.getNextExistDirectionFiled(nextTopField.position, EDirections.TOP);
+    const bottomItem = this.getNextExistDirectionFiled(startPosition, EDirections.BOTTOM);
+    if (nextTopField.fieldType !== fieldType) {
+      if (bottomItem?.fieldType === fieldType) {
+        this.findSameFieldsByDirections(nextTopField.position, fieldType, [
+          EDirections.LEFT,
+          EDirections.TOP,
+          EDirections.RIGHT,
+        ]).forEach(fieldId => result.push(fieldId));
       }
-      if (x < this.columnSize - ThreeInRow.FIELD_SIZE) {
-        secondFieldType = this.getItemByPosition({ x: x + ThreeInRow.FIELD_SIZE, y }).fieldType;
+
+      if (topItem?.fieldType === fieldType) {
+        this.findSameFieldsByDirections(nextTopField.position, fieldType, [
+          EDirections.LEFT,
+          EDirections.RIGHT,
+        ]).forEach(fieldId => result.push(fieldId));
       }
     } else {
-      if (y > 0) {
-        firstFieldType = this.getItemByPosition({ x, y: y - ThreeInRow.FIELD_SIZE }).fieldType;
+      if (topItem !== null) {
+        this.findSameFieldsByDirections(topItem.position, fieldType, [
+          EDirections.LEFT,
+          EDirections.TOP,
+          EDirections.RIGHT,
+        ]).forEach(fieldId => result.push(fieldId));
       }
-      if (y < this.rowSize - ThreeInRow.FIELD_SIZE) {
-        secondFieldType = this.getItemByPosition({ x, y: y + ThreeInRow.FIELD_SIZE }).fieldType;
-      }
-    }
-    return [firstFieldType, secondFieldType];
-  }
-
-  checkCycleCondition(value: number, isReverse: boolean, maxSize: number): boolean {
-    return isReverse ? value > 0 : value < maxSize;
-  }
-
-  availabilityToMoveVertical(isReverse = false): boolean {
-    const coefficient = ThreeInRow.FIELD_SIZE * (isReverse ? -1 : 1);
-    for (
-      let x = isReverse ? this.columnSize - ThreeInRow.FIELD_SIZE : 0;
-      this.checkCycleCondition(x, isReverse, this.columnSize);
-      x += coefficient
-    ) {
-      let alreadySkipped = false;
-      let startY = isReverse ? this.rowSize + coefficient : 0;
-      let fieldType = this.getItemByPosition({ x, y: startY }).fieldType;
-      let sameColorsCombo = 1;
-      for (let y = startY + coefficient; this.checkCycleCondition(y, isReverse, this.rowSize); y += coefficient) {
-        const nextFieldType = this.getItemByPosition({ x, y }).fieldType;
-        if (fieldType === nextFieldType) {
-          sameColorsCombo++;
-          continue;
-        }
-
-        if (alreadySkipped && sameColorsCombo >= 3) {
-          return true;
-        }
-
-        // left and right check on same color
-        if (!alreadySkipped) {
-          const [leftFieldType, rightFieldType] = this.getAroundFieldTypes(x, y);
-          (leftFieldType === fieldType || rightFieldType === fieldType) && sameColorsCombo++;
-          alreadySkipped = true;
-          continue;
-        }
-
-        alreadySkipped = false;
-        sameColorsCombo = 1;
-        startY += coefficient;
-        fieldType = this.getItemByPosition({ x, y: startY }).fieldType;
+      if (bottomItem !== null) {
+        this.findSameFieldsByDirections(bottomItem.position, fieldType, [
+          EDirections.LEFT,
+          EDirections.RIGHT,
+          EDirections.BOTTOM,
+        ]).forEach(fieldId => result.push(fieldId));
       }
     }
-    return false;
+
+    return result;
   }
 
-  availabilityToMoveHorizontal(isReverse = false): boolean {
-    const coefficient = ThreeInRow.FIELD_SIZE * (isReverse ? -1 : 1);
-    for (
-      let y = isReverse ? this.rowSize - ThreeInRow.FIELD_SIZE : 0;
-      this.checkCycleCondition(y, isReverse, this.rowSize);
-      y += coefficient
-    ) {
-      let alreadySkipped = false;
-      let startX = isReverse ? this.rowSize + coefficient : 0;
-      let fieldType = this.getItemByPosition({ x: startX, y }).fieldType;
-      let sameColorsCombo = 1;
-      for (let x = startX + coefficient; this.checkCycleCondition(x, isReverse, this.columnSize); x += coefficient) {
-        const nextFieldType = this.getItemByPosition({ x, y }).fieldType;
-        if (fieldType === nextFieldType) {
-          sameColorsCombo++;
-          continue;
-        }
+  checkBottomDirection(startPosition: GameFieldPosition, fieldType: FieldType): string[] {
+    const result: string[] = [];
+    const nextBottomField = this.getNextExistDirectionFiled(startPosition, EDirections.BOTTOM);
+    if (nextBottomField === null) {
+      return result;
+    }
+    const topItem = this.getNextExistDirectionFiled(startPosition, EDirections.TOP);
+    const bottomItem = this.getNextExistDirectionFiled(nextBottomField.position, EDirections.BOTTOM);
+    if (nextBottomField.fieldType !== fieldType) {
+      if (bottomItem?.fieldType === fieldType) {
+        this.findSameFieldsByDirections(nextBottomField.position, fieldType, [
+          EDirections.LEFT,
+          EDirections.RIGHT,
+        ]).forEach(fieldId => result.push(fieldId));
+      }
 
-        if (alreadySkipped && sameColorsCombo >= 3) {
-          return true;
-        }
-
-        // top and bottom check on same color
-        if (!alreadySkipped) {
-          const [topFieldType, bottomFieldType] = this.getAroundFieldTypes(x, y, false);
-          (topFieldType === fieldType || bottomFieldType === fieldType) && sameColorsCombo++;
-          alreadySkipped = true;
-          continue;
-        }
-
-        alreadySkipped = false;
-        sameColorsCombo = 1;
-        startX += coefficient;
-        fieldType = this.getItemByPosition({ x: startX, y }).fieldType;
+      if (topItem?.fieldType === fieldType) {
+        this.findSameFieldsByDirections(nextBottomField.position, fieldType, [
+          EDirections.LEFT,
+          EDirections.RIGHT,
+          EDirections.BOTTOM,
+        ]).forEach(fieldId => result.push(fieldId));
+      }
+    } else {
+      if (topItem !== null) {
+        this.findSameFieldsByDirections(topItem.position, fieldType, [
+          EDirections.LEFT,
+          EDirections.TOP,
+          EDirections.RIGHT,
+        ]).forEach(fieldId => result.push(fieldId));
+      }
+      if (bottomItem !== null) {
+        this.findSameFieldsByDirections(bottomItem.position, fieldType, [
+          EDirections.LEFT,
+          EDirections.RIGHT,
+          EDirections.BOTTOM,
+        ]).forEach(fieldId => result.push(fieldId));
       }
     }
-    return false;
+
+    return result;
+  }
+
+  checkLeftDirection(startPosition: GameFieldPosition, fieldType: FieldType): string[] {
+    const result: string[] = [];
+    const nextLeftField = this.getNextExistDirectionFiled(startPosition, EDirections.LEFT);
+    if (nextLeftField === null) {
+      return result;
+    }
+    const rightItem = this.getNextExistDirectionFiled(startPosition, EDirections.RIGHT);
+    const leftItem = this.getNextExistDirectionFiled(nextLeftField.position, EDirections.LEFT);
+    if (nextLeftField.fieldType !== fieldType) {
+      if (rightItem?.fieldType === fieldType) {
+        this.findSameFieldsByDirections(nextLeftField.position, fieldType, [
+          EDirections.LEFT,
+          EDirections.TOP,
+          EDirections.BOTTOM,
+        ]).forEach(fieldId => result.push(fieldId));
+      }
+
+      if (leftItem?.fieldType === fieldType) {
+        this.findSameFieldsByDirections(nextLeftField.position, fieldType, [
+          EDirections.TOP,
+          EDirections.BOTTOM,
+        ]).forEach(fieldId => result.push(fieldId));
+      }
+    } else {
+      if (leftItem !== null) {
+        this.findSameFieldsByDirections(leftItem.position, fieldType, [
+          EDirections.LEFT,
+          EDirections.TOP,
+          EDirections.BOTTOM,
+        ]).forEach(fieldId => result.push(fieldId));
+      }
+      if (rightItem !== null) {
+        this.findSameFieldsByDirections(rightItem.position, fieldType, [
+          EDirections.TOP,
+          EDirections.RIGHT,
+          EDirections.BOTTOM,
+        ]).forEach(fieldId => result.push(fieldId));
+      }
+    }
+
+    return result;
+  }
+
+  checkRightDirection(startPosition: GameFieldPosition, fieldType: FieldType): string[] {
+    const result: string[] = [];
+    const nextRightField = this.getNextExistDirectionFiled(startPosition, EDirections.RIGHT);
+    if (nextRightField === null) {
+      return result;
+    }
+    const rightItem = this.getNextExistDirectionFiled(nextRightField.position, EDirections.RIGHT);
+    const leftItem = this.getNextExistDirectionFiled(startPosition, EDirections.LEFT);
+    if (nextRightField.fieldType !== fieldType) {
+      if (rightItem?.fieldType === fieldType) {
+        this.findSameFieldsByDirections(nextRightField.position, fieldType, [
+          EDirections.TOP,
+          EDirections.BOTTOM,
+        ]).forEach(fieldId => result.push(fieldId));
+      }
+
+      if (leftItem?.fieldType === fieldType) {
+        this.findSameFieldsByDirections(nextRightField.position, fieldType, [
+          EDirections.TOP,
+          EDirections.RIGHT,
+          EDirections.BOTTOM,
+        ]).forEach(fieldId => result.push(fieldId));
+      }
+    } else {
+      if (leftItem !== null) {
+        this.findSameFieldsByDirections(leftItem.position, fieldType, [
+          EDirections.BOTTOM,
+          EDirections.LEFT,
+          EDirections.TOP,
+        ]).forEach(fieldId => result.push(fieldId));
+      }
+      if (rightItem !== null) {
+        this.findSameFieldsByDirections(rightItem.position, fieldType, [
+          EDirections.TOP,
+          EDirections.RIGHT,
+          EDirections.BOTTOM,
+        ]).forEach(fieldId => result.push(fieldId));
+      }
+    }
+
+    return result;
+  }
+
+  // test(startPosition: GameFieldPosition, fieldType: FieldType, mainDirectionType: EDirections) {
+  //   const result: string[] = [];
+  //   const nextField = this.getNextExistDirectionFiled(startPosition, mainDirectionType);
+  //   if (nextField === null) {
+  //     return result;
+  //   }
+  //   const mainDirection = this.getNextExistDirectionFiled(nextField.position, mainDirectionType);
+  //   const oppositeDirection = this.getNextExistDirectionFiled(
+  //     startPosition,
+  //     this.getOppositeDirection(mainDirectionType),
+  //   );
+  // }
+
+  // getOppositeDirection(direction: EDirections): EDirections {
+  //   switch (direction) {
+  //     case EDirections.BOTTOM:
+  //       return EDirections.TOP;
+  //     case EDirections.TOP:
+  //       return EDirections.BOTTOM;
+  //     case EDirections.LEFT:
+  //       return EDirections.RIGHT;
+  //     case EDirections.RIGHT:
+  //       return EDirections.LEFT;
+  //   }
+  // }
+
+  getNextExistDirectionFiled(startPosition: GameFieldPosition, direction: EDirections): GameField | null {
+    const position: GameFieldPosition = {
+      x: startPosition.x,
+      y: startPosition.y,
+    };
+    switch (direction) {
+      case EDirections.TOP: {
+        position.y += ThreeInRow.FIELD_SIZE;
+        break;
+      }
+      case EDirections.BOTTOM: {
+        position.y -= ThreeInRow.FIELD_SIZE;
+        break;
+      }
+      case EDirections.LEFT: {
+        position.x -= ThreeInRow.FIELD_SIZE;
+        break;
+      }
+      case EDirections.RIGHT: {
+        position.x += ThreeInRow.FIELD_SIZE;
+      }
+    }
+    if (position.x >= this.columnSize || position.x < 0 || position.y >= this.rowSize || position.y < 0) {
+      return null;
+    }
+    return this.getItemByPosition(position);
+  }
+
+  findSameFieldsByDirections(
+    startPosition: GameFieldPosition,
+    fieldType: FieldType,
+    directions: EDirections[],
+  ): string[] {
+    const result: string[] = [];
+    for (const direction of directions) {
+      const field = this.getNextExistDirectionFiled(startPosition, direction);
+      if (field !== null && field.fieldType === fieldType) {
+        result.push(field.id);
+      }
+    }
+    return result;
   }
 }
 

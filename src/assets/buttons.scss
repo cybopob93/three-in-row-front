@@ -4,7 +4,7 @@
   outline: none;
   padding: 8px 60px;
   color: var(--vt-c-white);
-  font-family: 'Roboto', sans-serif;
+  font-family: "Roboto", sans-serif;
   border-radius: 4px;
   position: relative;
   background-image: linear-gradient(90deg, var(--vt-c-indigo) 0%, var(--vt-c-indigo-lite) 100%);
@@ -13,7 +13,7 @@
 
   &:after {
     position: absolute;
-    content: '';
+    content: "";
     top: 0;
     left: 0;
     width: 100%;

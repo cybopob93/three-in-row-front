@@ -1,20 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Poppins&display=swap");
 
 :root {
   --vt-c-white: #ffffff;
-  --vt-c-white-mute: #FAFAFA;
+  --vt-c-white-mute: #fafafa;
 
-  --vt-c-dark: #251E39;
+  --vt-c-dark: #251e39;
 
-  --vt-c-indigo: #3E54FA;
-  --vt-c-indigo-lite: #75A2FC;
-  --vt-c-indigo-dark: #22309B;
-  --vt-c-indigo-mute: #DBE1EE;
+  --vt-c-indigo: #3e54fa;
+  --vt-c-indigo-lite: #75a2fc;
+  --vt-c-indigo-dark: #22309b;
+  --vt-c-indigo-mute: #dbe1ee;
 
-  --vt-c-red: #FF0120;
-  --vt-c-red-dark: #9E1B1B;
+  --vt-c-red: #ff0120;
+  --vt-c-red-dark: #9e1b1b;
 
-  --vt-c-orange: #FF5E2B;
+  --vt-c-orange: #ff5e2b;
 
   --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
   --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
@@ -56,8 +56,8 @@ body {
   background: var(--color-background-mute);
   transition: color 0.5s, background-color 0.5s;
   line-height: 1.6;
-  font-family: Poppins, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
-    Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: Poppins, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
+    "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   font-size: 15px;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

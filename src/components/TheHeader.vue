@@ -5,13 +5,7 @@ import { RouterLink } from "vue-router";
 <template>
   <header class="container__main--in header">
     <RouterLink to="/" class="header__logo">
-      <img
-        alt="Vue logo"
-        class="logo"
-        src="@/assets/logo.svg"
-        width="104"
-        height="40"
-      />
+      <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="104" height="40" />
     </RouterLink>
 
     <nav class="header__nav">
